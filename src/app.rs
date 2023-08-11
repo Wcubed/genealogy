@@ -8,12 +8,13 @@ pub fn App(cx: Scope) -> impl IntoView {
     provide_meta_context(cx);
 
     view! { cx,
-        // injects a stylesheet into the document <head>
+        // Normalize the style across browsers, and then add our own.
+        <Stylesheet href="/vendor/normalize.css"/>
         // id=leptos means cargo-leptos will hot-reload this stylesheet
-        <Stylesheet id="leptos" href="/pkg/leptos_start.css"/>
+        <Stylesheet id="leptos" href="/pkg/genealogy.css"/>
 
         // sets the document title
-        <Title text="Welcome to Leptos"/>
+        <Title text="Genealogy"/>
 
         // content for this welcome page
         <Router>
