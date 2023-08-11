@@ -3,10 +3,11 @@
 async fn main() -> std::io::Result<()> {
     use actix_files::Files;
     use actix_web::*;
+    use genealogy::persistence::SaveInRonFile;
+    use genealogy::person::PersonStore;
+    use genealogy::{app::*, person::PersonIdMap};
     use leptos::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
-    use leptos_start::app::*;
-    use leptos_start::person::PersonStore;
     use simplelog::*;
 
     TermLogger::init(
@@ -23,6 +24,9 @@ async fn main() -> std::io::Result<()> {
     let addr = conf.leptos_options.site_addr;
     // Generate the list of routes in your Leptos App
     let routes = generate_route_list(|cx| view! { cx, <App/> });
+
+    let person_store = PersonStore::new_from_id_map(PersonIdMap::load_or_default());
+    let web_data_person_store = web::Data::new(person_store);
 
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
@@ -42,7 +46,7 @@ async fn main() -> std::io::Result<()> {
                 |cx| view! { cx, <App/> },
             )
             .app_data(web::Data::new(leptos_options.to_owned()))
-            .app_data(web::Data::new(PersonStore::new()))
+            .app_data(web_data_person_store.clone())
         //.wrap(middleware::Compress::default())
     })
     .bind(&addr)?

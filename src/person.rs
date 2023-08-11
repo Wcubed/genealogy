@@ -8,11 +8,11 @@ use std::{
 use cfg_if::cfg_if;
 use leptos::*;
 use leptos_router::MultiActionForm;
-use log::info;
 use serde::{Deserialize, Serialize};
 
 cfg_if! {
 if #[cfg(feature = "ssr")] {
+    use crate::persistence::SaveInRonFile;
 
     #[derive(Debug, Default)]
     pub struct PersonStore {
@@ -24,6 +24,12 @@ if #[cfg(feature = "ssr")] {
             Default::default()
         }
 
+        pub fn new_from_id_map(id_map: PersonIdMap) -> Self {
+            Self {
+                store: RwLock::new(id_map)
+            }
+        }
+
         pub fn add(&self, person: Person) -> PersonId {
             let mut store = self.store.write().unwrap();
 
@@ -31,6 +37,8 @@ if #[cfg(feature = "ssr")] {
 
             store.map.insert(id, person);
             store.next_id = PersonId(id.0 + 1);
+
+            store.save();
 
             id
         }
@@ -40,8 +48,8 @@ if #[cfg(feature = "ssr")] {
         }
     }
 
-    #[derive(Debug)]
-    struct PersonIdMap {
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct PersonIdMap {
         map: PersonMap,
         next_id: PersonId,
     }
@@ -53,6 +61,11 @@ if #[cfg(feature = "ssr")] {
                 next_id: PersonId(0),
             }
         }
+    }
+
+    // TODO (2023-08-11): Do we maybe want to store each person in their own .RON file, instead of storing the entire store in a single file?
+    impl SaveInRonFile for PersonIdMap {
+        const FILE_NAME: &'static str = "persons";
     }
 }}
 
@@ -85,6 +98,7 @@ pub struct Person {
 pub async fn create_person(cx: Scope, name: String) -> Result<(), ServerFnError> {
     use actix_web::web;
     use leptos_actix::extract;
+    use log::info;
 
     // fake API delay
     std::thread::sleep(std::time::Duration::from_millis(2000));
@@ -139,7 +153,7 @@ pub fn PersonsView(cx: Scope) -> impl IntoView {
                                         view! { cx, <pre class="error">"Server Error: " {e.to_string()}</pre>}.into_view(cx)
                                     },
                                     Ok(persons) => {
-                                        persons.iter().map(move |(id, person)| {
+                                        persons.iter().map(move |(_id, person)| {
                                         view!{
                                             cx,
                                             <li>
