@@ -1,4 +1,6 @@
 pub mod app;
+pub mod person;
+
 use cfg_if::cfg_if;
 
 cfg_if! {

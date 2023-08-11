@@ -6,6 +6,7 @@ async fn main() -> std::io::Result<()> {
     use leptos::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use leptos_start::app::*;
+    use leptos_start::person::PersonStore;
     use simplelog::*;
 
     TermLogger::init(
@@ -41,6 +42,7 @@ async fn main() -> std::io::Result<()> {
                 |cx| view! { cx, <App/> },
             )
             .app_data(web::Data::new(leptos_options.to_owned()))
+            .app_data(web::Data::new(PersonStore::new()))
         //.wrap(middleware::Compress::default())
     })
     .bind(&addr)?

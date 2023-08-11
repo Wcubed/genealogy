@@ -1,5 +1,19 @@
 # Genealogy
 
+## Whishlist
+
+- [ ] Add people with their name.
+- [ ] List all persons.
+- [ ] Add parents.
+- [ ] Have a page for a person.
+  - [ ] With their parents
+    - [ ] Biological
+    - [ ] and adopted.
+  - [ ] With their children, biological and adopted, including the other parent?
+  - [ ] With their spouse? And any previous relationships?
+  - [ ] Birth date, either exact, unknown, inexact a month, inexact a year. Any other options?
+  - [ ] Date of death. Similar options as for the date of birth.
+
 ## Running your project
 
 `cargo leptos watch`

@@ -1,3 +1,4 @@
+use crate::person::PersonsView;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
@@ -38,6 +39,7 @@ fn HomePage(cx: Scope) -> impl IntoView {
     view! { cx,
         <h1>"Welcome to Leptos!"</h1>
         <button on:click=on_click>"Click Me: " {count}</button>
+        <PersonsView/>
     }
 }
 
