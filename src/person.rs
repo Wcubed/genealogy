@@ -1,37 +1,8 @@
 use leptos::*;
 use leptos_router::*;
 use log::info;
-use std::{collections::HashMap, hash::Hash};
 
 use crate::person_data::{Person, PersonId};
-
-pub type PersonCache = StoredValue<(
-    Scope,
-    HashMap<PersonId, Resource<(), std::result::Result<Person, leptos::ServerFnError>>>,
-)>;
-
-pub fn new_cache(cx: Scope) -> PersonCache {
-    store_value(cx, (cx, HashMap::new()))
-}
-
-pub fn get_person(
-    cache: PersonCache,
-    id: PersonId,
-) -> Resource<(), Result<Person, leptos::ServerFnError>> {
-    let maybe_resource = cache.with_value(|persons| persons.1.get(&id).cloned());
-    let resource = match maybe_resource {
-        Some(resource) => resource,
-        None => {
-            let context = cache.with_value(|persons| persons.0);
-            let resource = create_resource(context, || {}, move |_| request_person(context, id));
-            cache.update_value(|cache| {
-                cache.1.insert(id, resource);
-            });
-            resource
-        }
-    };
-    resource
-}
 
 #[server(CreatePerson, "/api")]
 pub async fn create_person(cx: Scope, name: String) -> Result<(), ServerFnError> {
@@ -39,9 +10,6 @@ pub async fn create_person(cx: Scope, name: String) -> Result<(), ServerFnError>
     use actix_web::web;
     use leptos_actix::extract;
     use log::info;
-
-    // fake API delay
-    std::thread::sleep(std::time::Duration::from_millis(2000));
 
     extract(cx, |persons: web::Data<PersonStore>| async move {
         let person = Person { name };
@@ -53,8 +21,8 @@ pub async fn create_person(cx: Scope, name: String) -> Result<(), ServerFnError>
     .await
 }
 
-#[server(RequestPerson, "/api")]
-pub async fn request_person(cx: Scope, id: PersonId) -> Result<Person, ServerFnError> {
+#[server(GetPerson, "/api")]
+pub async fn get_person(cx: Scope, id: PersonId) -> Result<Person, ServerFnError> {
     use crate::person_data::PersonStore;
     use actix_web::web;
     use leptos_actix::extract;
@@ -62,12 +30,24 @@ pub async fn request_person(cx: Scope, id: PersonId) -> Result<Person, ServerFnE
     info! {"Retrieving person with id: {}", id.raw()};
 
     extract(cx, move |persons: web::Data<PersonStore>| async move {
-        persons.get(id)
+        persons.get_person(id)
     })
     .await
     .and_then(|maybe_person| {
         maybe_person.ok_or_else(|| ServerFnError::ServerError("Person not found".to_string()))
     })
+}
+
+#[server(GetPersonList, "/api")]
+pub async fn get_persons_list(cx: Scope) -> Result<Vec<(PersonId, String)>, ServerFnError> {
+    use crate::person_data::PersonStore;
+    use actix_web::web;
+    use leptos_actix::extract;
+
+    extract(cx, move |persons: web::Data<PersonStore>| async move {
+        persons.list_names_and_ids()
+    })
+    .await
 }
 
 #[derive(Params, PartialEq, Eq, Clone)]
@@ -76,19 +56,19 @@ struct PersonParams {
 }
 
 #[component]
-pub fn SinglePerson(cx: Scope, persons: PersonCache) -> impl IntoView {
+pub fn SinglePerson(cx: Scope) -> impl IntoView {
     // TODO (2023-08-11): https://leptos-rs.github.io/leptos/router/18_params_and_queries.html
     let params = use_params::<PersonParams>(cx);
     let id =
         move || params.with(|params| params.clone().map(|params| params.id).unwrap_or_default());
 
-    let resource = get_person(persons, id());
+    let person_resource = create_resource(cx, id, move |id| get_person(cx, id));
 
     view! {cx,
-        <Suspense
+        <Transition
             fallback=move || view! {cx, <p>"Loading..."</p>}
         >
-            {move || resource.read(cx).map(|maybe_person| match maybe_person{
+            {move || person_resource.read(cx).map(|maybe_person| match maybe_person{
                 Ok(person) => view!{cx, <p>{person.name}</p>},
                 Err(e) => {
                     let message = format!("Error while loading person: {}", e);
@@ -96,14 +76,18 @@ pub fn SinglePerson(cx: Scope, persons: PersonCache) -> impl IntoView {
                 }
             })
             }
-        </Suspense>
+        </Transition>
     }
 }
 
 #[component]
 pub fn PersonsView(cx: Scope) -> impl IntoView {
     let create_person = create_server_multi_action::<CreatePerson>(cx);
-    let submissions = create_person.submissions();
+    let person_list = create_resource(
+        cx,
+        move || create_person.version().get(),
+        move |_| get_persons_list(cx),
+    );
 
     view! {
         cx,
@@ -115,7 +99,35 @@ pub fn PersonsView(cx: Scope) -> impl IntoView {
                 </label>
                 <input type="submit" value="Create"/>
             </MultiActionForm>
-            // Nested child views appear here.
+            <Transition
+                fallback=move || view! {cx, <p>"Loading..."</p>}
+            >
+                {move || person_list.read(cx).map(|maybe_persons| match maybe_persons{
+                    Ok(persons) => {
+                        view!{cx,
+                            <ul>
+                                <For
+                                    each=move || persons.clone().into_iter()
+                                    key=|person| person.0
+                                    view=move|cx, person| {
+                                        view!{cx,
+                                            <li><A href={person.0.raw().to_string()}>{person.1.to_string()}</A></li>
+                                        }
+                                    }
+                                >
+                                </For>
+                            </ul>
+                        }.into_view(cx)
+                    },
+                    Err(e) => {
+                        let message = format!("Error while loading person: {}", e);
+                        view!{cx, <p>{message}</p>}.into_view(cx)
+                    }
+                })
+                }
+            </Transition>
+
+            // Nested child view appears here.
             <Outlet/>
         </div>
     }

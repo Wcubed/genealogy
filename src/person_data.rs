@@ -1,7 +1,6 @@
 use std::{collections::HashMap, hash::Hash, sync::RwLock};
 
 use cfg_if::cfg_if;
-use log::info;
 use serde::{Deserialize, Serialize};
 
 cfg_if! {
@@ -37,8 +36,12 @@ if #[cfg(feature = "ssr")] {
             id
         }
 
-        pub fn get(&self, id: PersonId) -> Option<Person> {
+        pub fn get_person(&self, id: PersonId) -> Option<Person> {
             self.store.read().unwrap().map.get(&id).cloned()
+        }
+
+        pub fn list_names_and_ids(&self) -> Vec<(PersonId, String)> {
+            self.store.read().unwrap().map.iter().map(|(id, person)| (*id, person.name.clone())).collect()
         }
     }
 
