@@ -51,10 +51,14 @@ pub trait SaveInRonFile: Sized + Default + Serialize + DeserializeOwned {
         path.push(Self::FILE_NAME);
         let path = path.with_extension("ron");
 
+        info!("Loading {}", path.file_name().unwrap().to_str().unwrap());
+
         if let Ok(contents) = fs::read_to_string(path) {
             let result = ron::from_str(&contents);
+            info!("Load successful.");
             result.ok()
         } else {
+            warn!("Load failed.");
             None
         }
     }

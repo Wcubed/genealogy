@@ -4,8 +4,10 @@ async fn main() -> std::io::Result<()> {
     use actix_files::Files;
     use actix_web::*;
     use genealogy::persistence::SaveInRonFile;
-    use genealogy::person::PersonStore;
-    use genealogy::{app::*, person::PersonIdMap};
+    use genealogy::{
+        app::*,
+        person_data::{PersonIdMap, PersonStore},
+    };
     use leptos::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use simplelog::*;

@@ -1,4 +1,4 @@
-use crate::person::PersonsView;
+use crate::person::{new_cache, PersonsView, SinglePerson};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
@@ -7,6 +7,8 @@ use leptos_router::*;
 pub fn App(cx: Scope) -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context(cx);
+
+    let person_cache = new_cache(cx);
 
     view! { cx,
         // Normalize the style across browsers, and then add our own.
@@ -17,11 +19,18 @@ pub fn App(cx: Scope) -> impl IntoView {
         // sets the document title
         <Title text="Genealogy"/>
 
-        // content for this welcome page
         <Router>
             <main>
                 <Routes>
                     <Route path="" view=HomePage/>
+                    <Route path="/persons" view=PersonsView>
+                        <Route path=":id" view=move |cx| view!{cx,
+                            <SinglePerson persons=person_cache />
+                        }/>
+                        <Route path="" view=|cx| view! { cx,
+                            <p>"Select a person to view for more info."</p>
+                        }/>
+                    </Route>
                     <Route path="/*any" view=NotFound/>
                 </Routes>
             </main>

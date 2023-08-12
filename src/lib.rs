@@ -1,6 +1,7 @@
 pub mod app;
 pub mod persistence;
 pub mod person;
+pub mod person_data;
 
 use cfg_if::cfg_if;
 
