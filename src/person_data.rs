@@ -42,7 +42,8 @@ if #[cfg(feature = "ssr")] {
         }
 
         pub fn search_by_names(&self, search_string: &str) -> Vec<(PersonId, String)> {
-            let mut names: Vec<_> = self.store.read().unwrap().map.iter().filter(|(_, person)| person.name.contains(search_string)).map(|(id, person)| (*id, person.name.clone())).collect();
+            let search_string = search_string.to_lowercase();
+            let mut names: Vec<_> = self.store.read().unwrap().map.iter().filter(|(_, person)| person.name.to_lowercase().contains(&search_string)).map(|(id, person)| (*id, person.name.clone())).collect();
             names.sort_by(|a, b| a.1.cmp(&b.1));
             names
         }
