@@ -33,6 +33,11 @@ a {
 	}
 }
 
+input {
+	display: inline-block;
+	box-sizing: border-box;
+}
+
 pre.error {
 	background-color: $error-color;
 	padding: 0.5rem;
@@ -64,8 +69,6 @@ input {
 
 		input {
 			width: 100%;
-			display: block;
-			box-sizing: border-box;
 		}
 	}
 
@@ -94,5 +97,26 @@ input {
 		display: block;
 		text-decoration: none;
 		padding: 0.2rem 0.5rem;
+	}
+}
+
+.person-view {
+	h1 {
+		width: auto;
+		display: inline-block;
+	}
+
+	.edit-button {
+		display: inline-block;
+		vertical-align: top;
+	}
+
+	form {
+		width: 100%;
+		display: flex;
+
+		input[type=text] {
+			flex-grow: 1;
+		}
 	}
 }

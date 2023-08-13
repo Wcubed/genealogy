@@ -49,13 +49,16 @@ pub async fn get_person(cx: Scope, id: PersonId) -> Result<Person, ServerFnError
 }
 
 #[server(GetPersonList, "/api")]
-pub async fn get_persons_list(cx: Scope) -> Result<Vec<(PersonId, String)>, ServerFnError> {
+pub async fn get_persons_list(
+    cx: Scope,
+    search_string: String,
+) -> Result<Vec<(PersonId, String)>, ServerFnError> {
     use crate::person_data::PersonStore;
     use actix_web::web;
     use leptos_actix::extract;
 
     extract(cx, move |persons: web::Data<PersonStore>| async move {
-        persons.list_names_and_ids()
+        persons.search_by_names(&search_string)
     })
     .await
 }
@@ -103,38 +106,47 @@ pub fn SinglePersonView(
     let (editing_name, set_editing_name) = create_signal(cx, false);
 
     view! {cx,
+        <div class="person-view">
         <Show
             when=editing_name
-            fallback=move|cx| view!{cx, <h1 on:click=move |_|{set_editing_name.set(true)}>{person().name}</h1>}
+            fallback=move|cx| view!{cx,
+                <h1>{person().name}</h1>
+                <input class="edit-button" type="button" value="Edit name" on:click=move |_| {set_editing_name(true)}/>
+            }
         >
             <ActionForm action=edit_name>
                 <input type="hidden" name="id" value={person().id.raw()}/>
                 <input type="text" placeholder="name" name="new_name" value={person().name} autofocus=true/>
                 <input type="submit" value="Ok" title="[Enter]"/>
                 <input type="button" value="Cancel" on:click=move |_| {
-                        set_editing_name.set(false)
+                        set_editing_name(false)
                     }
                 />
             </ActionForm>
         </Show>
+        </div>
     }
 }
 
 #[component]
 pub fn PersonsView(cx: Scope) -> impl IntoView {
+    let (search_string, set_search_string) = create_signal(cx, String::new());
     let create_person = create_server_multi_action::<CreatePerson>(cx);
     let person_list = create_resource(
         cx,
-        move || create_person.version().get(),
-        move |_| get_persons_list(cx),
+        move || (create_person.version().get(), search_string),
+        move |_| get_persons_list(cx, search_string()),
     );
 
     view! {
         cx,
         <div class="content-with-sidebar">
         <div class="sidebar">
-            <MultiActionForm action=create_person>
-                <input type="text" placeholder="name" name="name"/>
+            <MultiActionForm action=create_person on:submit=move|_| {set_search_string(String::new())}>
+                <input type="text" placeholder="Search name" name="name" prop:value=search_string
+                    on:input=move|ev| {
+                        set_search_string(event_target_value(&ev));
+                    }/>
                 <input type="submit" value="Create"/>
             </MultiActionForm>
             <Transition
@@ -148,8 +160,12 @@ pub fn PersonsView(cx: Scope) -> impl IntoView {
                                     each=move || persons.clone().into_iter()
                                     key=|person| person.0
                                     view=move|cx, person| {
+                                        let mut name = person.1.to_string();
+                                        if name.is_empty() {
+                                            name = "-Unknown Name-".to_string();
+                                        }
                                         view!{cx,
-                                            <li><A href={person.0.raw().to_string()}>{person.1.to_string()}</A></li>
+                                            <li><A href={person.0.raw().to_string()}>{name}</A></li>
                                         }
                                     }
                                 >
@@ -158,8 +174,7 @@ pub fn PersonsView(cx: Scope) -> impl IntoView {
                         }.into_view(cx)
                     },
                     Err(e) => {
-                        let message = format!("Error while loading person: {}", e);
-                        view!{cx, <p>{message}</p>}.into_view(cx)
+                        view!{cx, <ErrorTemplate error=e/>}.into_view(cx)
                     }
                 })
                 }

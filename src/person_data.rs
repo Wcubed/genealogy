@@ -41,9 +41,8 @@ if #[cfg(feature = "ssr")] {
             self.store.read().unwrap().map.get(&id).cloned()
         }
 
-        /// Returns all names with their id, ordered by name.
-        pub fn list_names_and_ids(&self) -> Vec<(PersonId, String)> {
-            let mut names: Vec<_> = self.store.read().unwrap().map.iter().map(|(id, person)| (*id, person.name.clone())).collect();
+        pub fn search_by_names(&self, search_string: &str) -> Vec<(PersonId, String)> {
+            let mut names: Vec<_> = self.store.read().unwrap().map.iter().filter(|(_, person)| person.name.contains(search_string)).map(|(id, person)| (*id, person.name.clone())).collect();
             names.sort_by(|a, b| a.1.cmp(&b.1));
             names
         }
