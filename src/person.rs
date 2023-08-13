@@ -1,32 +1,42 @@
+use cfg_if::cfg_if;
 use leptos::*;
 use leptos_router::*;
 use log::info;
 
-use crate::person_data::{Person, PersonId};
-
-#[server(CreatePerson, "/api")]
-pub async fn create_person(cx: Scope, name: String) -> Result<(), ServerFnError> {
+cfg_if! {
+if #[cfg(feature = "ssr")] {
     use crate::person_data::PersonStore;
     use actix_web::web;
     use leptos_actix::extract;
-    use log::info;
+}}
 
+use crate::{
+    error_template::ErrorTemplate,
+    person_data::{Person, PersonId},
+};
+
+#[server(CreatePerson, "/api")]
+pub async fn create_person(cx: Scope, name: String) -> Result<(), ServerFnError> {
     extract(cx, |persons: web::Data<PersonStore>| async move {
-        let person = Person { name };
+        persons.add_with_name(name);
+    })
+    .await
+}
 
-        info!("New person: {:?}", person);
-
-        persons.add(person);
+#[server(UpdatePersonName, "/api")]
+pub async fn update_person_name(
+    cx: Scope,
+    id: PersonId,
+    new_name: String,
+) -> Result<(), ServerFnError> {
+    extract(cx, move |persons: web::Data<PersonStore>| async move {
+        persons.update_name(id, new_name);
     })
     .await
 }
 
 #[server(GetPerson, "/api")]
 pub async fn get_person(cx: Scope, id: PersonId) -> Result<Person, ServerFnError> {
-    use crate::person_data::PersonStore;
-    use actix_web::web;
-    use leptos_actix::extract;
-
     info! {"Retrieving person with id: {}", id.raw()};
 
     extract(cx, move |persons: web::Data<PersonStore>| async move {
@@ -62,21 +72,51 @@ pub fn SinglePerson(cx: Scope) -> impl IntoView {
     let id =
         move || params.with(|params| params.clone().map(|params| params.id).unwrap_or_default());
 
-    let person_resource = create_resource(cx, id, move |id| get_person(cx, id));
+    let edit_name_action = create_server_action::<UpdatePersonName>(cx);
+    let person_resource = create_resource(
+        cx,
+        move || (id(), edit_name_action.version().get()),
+        move |_| get_person(cx, id()),
+    );
 
     view! {cx,
         <Transition
             fallback=move || view! {cx, <p>"Loading..."</p>}
         >
-            {move || person_resource.read(cx).map(|maybe_person| match maybe_person{
-                Ok(person) => view!{cx, <p>{person.name}</p>},
-                Err(e) => {
-                    let message = format!("Error while loading person: {}", e);
-                    view!{cx, <p>{message}</p>}
-                }
-            })
-            }
+            {move || person_resource.read(cx).map(|maybe_person| match maybe_person {
+                Ok(person) => {
+                    let (person, _) = create_signal(cx, person);
+                    view!{cx, <SinglePersonView person=person edit_name=edit_name_action/>}
+                },
+                Err(e) => view!{cx, <ErrorTemplate error=e/>},
+            })}
         </Transition>
+    }
+}
+
+#[component]
+pub fn SinglePersonView(
+    cx: Scope,
+    person: ReadSignal<Person>,
+    edit_name: Action<UpdatePersonName, Result<(), ServerFnError>>,
+) -> impl IntoView {
+    let (editing_name, set_editing_name) = create_signal(cx, false);
+
+    view! {cx,
+        <Show
+            when=editing_name
+            fallback=move|cx| view!{cx, <h1 on:click=move |_|{set_editing_name.set(true)}>{person().name}</h1>}
+        >
+            <ActionForm action=edit_name>
+                <input type="hidden" name="id" value={person().id.raw()}/>
+                <input type="text" placeholder="name" name="new_name" value={person().name} autofocus=true/>
+                <input type="submit" value="Ok" title="[Enter]"/>
+                <input type="button" value="Cancel" on:click=move |_| {
+                        set_editing_name.set(false)
+                    }
+                />
+            </ActionForm>
+        </Show>
     }
 }
 
@@ -91,12 +131,10 @@ pub fn PersonsView(cx: Scope) -> impl IntoView {
 
     view! {
         cx,
-        <div>
+        <div class="content-with-sidebar">
+        <div class="sidebar">
             <MultiActionForm action=create_person>
-                <label>
-                    Name:
-                    <input type="text" name="name"/>
-                </label>
+                <input type="text" placeholder="name" name="name"/>
                 <input type="submit" value="Create"/>
             </MultiActionForm>
             <Transition
@@ -126,9 +164,11 @@ pub fn PersonsView(cx: Scope) -> impl IntoView {
                 })
                 }
             </Transition>
-
+        </div>
+        <div class="main-content">
             // Nested child view appears here.
             <Outlet/>
+        </div>
         </div>
     }
 }

@@ -23,10 +23,11 @@ if #[cfg(feature = "ssr")] {
             }
         }
 
-        pub fn add(&self, person: Person) -> PersonId {
+        pub fn add_with_name(&self, name: String) -> PersonId {
             let mut store = self.store.write().unwrap();
 
             let id = store.next_id;
+            let person = Person { id, name };
 
             store.map.insert(id, person);
             store.next_id = PersonId(id.0 + 1);
@@ -45,6 +46,14 @@ if #[cfg(feature = "ssr")] {
             let mut names: Vec<_> = self.store.read().unwrap().map.iter().map(|(id, person)| (*id, person.name.clone())).collect();
             names.sort_by(|a, b| a.1.cmp(&b.1));
             names
+        }
+
+        pub fn update_name(&self, id: PersonId, new_name: String) {
+            // TODO (2023-08-13): Return an error if the person does not exist.
+            let mut store = self.store.write().unwrap();
+            store.map.entry(id).and_modify(|person| person.name = new_name);
+
+            store.save();
         }
     }
 
@@ -86,5 +95,6 @@ impl leptos_router::IntoParam for PersonId {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Person {
+    pub id: PersonId,
     pub name: String,
 }

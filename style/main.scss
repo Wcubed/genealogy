@@ -1,7 +1,65 @@
-body {
-	font-family: serif;
+$background-color: #0f0f0f;
+$foreground-color: rgb(238, 238, 238);
+$primary-color: #40b1fd;
+$primary-color-light: #a2d9fd;
+$error-color: rgb(90, 0, 0);
+
+html {
+	height: 100%;
 }
 
-.pending {
-	color: gray;
+body {
+	font-family: serif;
+	background-color: $background-color;
+	color: $foreground-color;
+	margin: 0;
+	height: 100%;
+}
+
+main {
+	height: 100%;
+}
+
+h1 {
+	padding-right: 1rem;
+	margin: 0;
+}
+
+a {
+	color: $primary-color;
+
+	&:hover {
+		color: $primary-color-light;
+	}
+}
+
+pre.error {
+	background-color: $error-color;
+	padding: 0.5rem;
+	border-radius: 0.5rem;
+}
+
+button,
+input {
+	color: $foreground-color;
+	background-color: #25282b;
+	border-color: #5a5d5f;
+	border-radius: 0.2rem;
+	padding: 0.2rem 0.3rem;
+}
+
+.content-with-sidebar {
+	display: flex;
+	height: 100%;
+
+	.sidebar {
+		flex-basis: auto;
+		padding: 1rem;
+		background-color: #272727;
+	}
+
+	.main-content {
+		flex-grow: 1;
+		padding: 1rem;
+	}
 }

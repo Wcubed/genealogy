@@ -1,4 +1,5 @@
 pub mod app;
+pub mod error_template;
 pub mod persistence;
 pub mod person;
 pub mod person_data;
