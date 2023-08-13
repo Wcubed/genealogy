@@ -143,7 +143,7 @@ pub fn PersonsView(cx: Scope) -> impl IntoView {
                 {move || person_list.read(cx).map(|maybe_persons| match maybe_persons{
                     Ok(persons) => {
                         view!{cx,
-                            <ul>
+                            <ul class="person-list">
                                 <For
                                     each=move || persons.clone().into_iter()
                                     key=|person| person.0

@@ -53,13 +53,46 @@ input {
 	height: 100%;
 
 	.sidebar {
-		flex-basis: auto;
-		padding: 1rem;
+		flex-basis: 13rem;
+		min-width: 13rem;
 		background-color: #272727;
+		overflow: scroll;
+
+		form {
+			padding: 0.5rem;
+		}
+
+		input {
+			width: 100%;
+			display: block;
+			box-sizing: border-box;
+		}
 	}
 
 	.main-content {
 		flex-grow: 1;
 		padding: 1rem;
+	}
+}
+
+.person-list {
+	padding: 0rem;
+	border-top-width: 1px;
+	border-color: #505050;
+	border-top-style: solid;
+
+	li {
+		overflow-wrap: normal;
+		list-style-type: none;
+
+		&:nth-child(2n) {
+			background-color: #ffffff15;
+		}
+	}
+
+	a {
+		display: block;
+		text-decoration: none;
+		padding: 0.2rem 0.5rem;
 	}
 }
